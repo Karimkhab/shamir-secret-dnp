@@ -1,62 +1,67 @@
 # shamir-secret-dnp
 
-Minimal starter project for Shamir Secret Sharing with:
+Учебный проект по Shamir Secret Sharing для команды из 5 человек.
 
-- Python core API
-- Streamlit demo UI
-- Basic tests
+Цель этой структуры: не реализовать все заранее, а четко раздать зоны ответственности, контракты и правила интеграции, чтобы каждый разработчик мог работать в своей ветке без лишних согласований.
 
-References:
+## Общая схема
 
-- [Original paper](https://web.mit.edu/6.857/OldStuff/Fall03/ref/Shamir-HowToShareASecret.pdf)
-- [Visualization](https://iancoleman.io/shamir/)
-
-## Quick Start
-
-```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+```mermaid
+flowchart LR
+    UI["Frontend / UI"] --> API["Spring Boot Backend"]
+    API --> ENC["Encoder"]
+    API --> DEC["Decoder"]
+    API --> LOGS["Structured Logs"]
 ```
 
-Run tests:
+## Принцип архитектуры
 
-```bash
-PYTHONPATH=src pytest -q
-```
+- frontend работает только через backend
+- backend оркестрирует вызовы и держит HTTP-контракт
+- encoder отвечает только за разбиение секрета
+- decoder отвечает только за восстановление секрета
+- алгоритм и transport-слой не смешиваются
 
-Run web demo:
+## Документация по задачам
 
-```bash
-PYTHONPATH=src streamlit run app/streamlit_app.py
-```
+- [Frontend task](docs/frontend.md)
+- [Backend task](docs/backend.md)
+- [Encoder task](docs/encoder.md)
+- [Decoder task](docs/decoder.md)
 
-## Public API
+Каждый участник должен читать в первую очередь свой файл и не менять внешний контракт без согласования.
 
-```python
-from shamir_secret import split_secret, recover_secret
+## Командная работа
 
-shares = split_secret("hello", threshold=3, total_shares=5)
-secret = recover_secret(shares[:3])
-```
+- `main` только для стабильного состояния
+- каждый работает в своей ветке
+- merge в `main` только через PR
+- один PR должен закрывать одну понятную задачу
 
-- `split_secret(secret: str, threshold: int, total_shares: int) -> list[str]`
-- `recover_secret(encoded_shares: list[str]) -> str`
+Рекомендуемые ветки:
 
-Share format is self-contained (`threshold`, `prime`, `x`, `y`, payload length), so shares are portable across OSes.
+- `feature/frontend`
+- `feature/backend`
+- `feature/encoder`
+- `feature/decoder`
 
-## Project Structure
+## Что стоит зафиксировать сразу
 
-```text
-app/
-  streamlit_app.py
-src/
-  shamir_secret/
-    __init__.py
-    core.py
-tests/
-  conftest.py
-  test_shamir.py
-requirements.txt
-LICENSE
-```
+- backend-контракты запроса и ответа
+- строковый формат `share`
+- единый формат ошибки
+- запрет логирования `secret` и полного списка `shares`
+
+## Что из DNP здесь действительно оправдано
+
+- `client-server`
+- `stateless service`
+- `contract-first`
+- `validation at boundaries`
+- `versioned API`
+- `clear service boundaries`
+
+## Ссылки
+
+- Shamir paper: <https://web.mit.edu/6.857/OldStuff/Fall03/ref/Shamir-HowToShareASecret.pdf>
+- Visualization: <https://iancoleman.io/shamir/>
