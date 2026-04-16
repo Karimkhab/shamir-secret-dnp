@@ -1,7 +1,4 @@
 import logging
-
-from sympy import Dict
-
 from shamir.core import calculate_polynomial, generate, hash_data
 from shamir.share import Share
 
@@ -30,7 +27,7 @@ def check_input_data(secret: str, threshold: int, total_shares: int) -> None:
         raise ValueError("threshold must not exceed total_shares")
 
 
-def split_secret(secret: str, threshold: int, total_shares: int) -> Dict[str]:
+def split_secret(secret: str, threshold: int, total_shares: int) -> dict[str]:
     """
     Split a secret into a list of shares.
     :param secret: Non-empty text secret to split.

@@ -1,67 +1,166 @@
-# shamir-secret-dnp
+# Shamir Secret Sharing (Distributed System)
 
-Учебный проект по Shamir Secret Sharing для команды из 5 человек.
+This project implements **Shamir Secret Sharing** in a **distributed architecture** using FastAPI and RabbitMQ.
 
-Цель этой структуры: не реализовать все заранее, а четко раздать зоны ответственности, контракты и правила интеграции, чтобы каждый разработчик мог работать в своей ветке без лишних согласований.
+It demonstrates how a cryptographic algorithm can be integrated into an asynchronous system with message brokers.
 
-## Общая схема
+---
+
+## Overview
+
+- Split a secret into multiple shares
+- Recover the secret from a subset of shares (threshold-based)
+- Validate reconstruction using SHA-256 hash
+- Process tasks asynchronously via RabbitMQ
+
+---
+
+## Architecture
 
 ```mermaid
 flowchart LR
-    UI["Frontend / UI"] --> API["Spring Boot Backend"]
-    API --> ENC["Encoder"]
-    API --> DEC["Decoder"]
-    API --> LOGS["Structured Logs"]
+    classDef blue fill:#f0f6ff,stroke:#3b82f6,color:#000;
+
+    UI["Frontend (React)"]:::blue
+    API["FastAPI API"]:::blue
+    MQ["RabbitMQ"]:::blue
+    WORKER["Worker"]:::blue
+
+    UI --> API
+    API --> MQ
+    MQ --> WORKER
+````
+
+---
+
+## Message Flow
+
+```mermaid
+flowchart LR
+    CLIENT["Client"] --> API["API"]
+    API -->|publish| MQ["Queue"]
+    MQ -->|consume| WORKER["Worker"]
+    WORKER --> RESULT["Result"]
 ```
 
-## Принцип архитектуры
+---
 
-- frontend работает только через backend
-- backend оркестрирует вызовы и держит HTTP-контракт
-- encoder отвечает только за разбиение секрета
-- decoder отвечает только за восстановление секрета
-- алгоритм и transport-слой не смешиваются
+## Project Structure
 
-## Документация по задачам
+```
+src/
+├── api/        # FastAPI endpoints (split / recover)
+├── broker/     # RabbitMQ publisher
+├── worker/     # Background worker (processing tasks)
+├── shamir/     # Core Shamir algorithm (math + logic)
+├── frontend/   # React UI
+```
 
-- [Frontend task](docs/frontend.md)
-- [Backend task](docs/backend.md)
-- [Encoder task](docs/encoder.md)
-- [Decoder task](docs/decoder.md)
+---
 
-Каждый участник должен читать в первую очередь свой файл и не менять внешний контракт без согласования.
+## Components
 
-## Командная работа
+### 🔹 API (FastAPI)
 
-- `main` только для стабильного состояния
-- каждый работает в своей ветке
-- merge в `main` только через PR
-- один PR должен закрывать одну понятную задачу
+* Accepts client requests
+* Sends tasks to RabbitMQ
+* Does not perform heavy computation
 
-Рекомендуемые ветки:
+### 🔹 RabbitMQ
 
-- `feature/frontend`
-- `feature/backend`
-- `feature/encoder`
-- `feature/decoder`
+* Message broker
+* Decouples API and worker
+* Enables async processing
 
-## Что стоит зафиксировать сразу
+### 🔹 Worker
 
-- backend-контракты запроса и ответа
-- строковый формат `share`
-- единый формат ошибки
-- запрет логирования `secret` и полного списка `shares`
+* Consumes tasks from queue
+* Executes:
 
-## Что из DNP здесь действительно оправдано
+  * `split_secret`
+  * `recover_secret`
+* Logs results
 
-- `client-server`
-- `stateless service`
-- `contract-first`
-- `validation at boundaries`
-- `versioned API`
-- `clear service boundaries`
+### 🔹 Shamir Core
 
-## Ссылки
+* Polynomial-based secret sharing
+* Lagrange interpolation for recovery
+* Hash validation for correctness
 
-- Shamir paper: <https://web.mit.edu/6.857/OldStuff/Fall03/ref/Shamir-HowToShareASecret.pdf>
-- Visualization: <https://iancoleman.io/shamir/>
+---
+
+## Security
+
+* Finite field arithmetic: `GF(p)` where `p > secret`
+* Cryptographically secure randomness (`secrets`)
+* Integrity check via SHA-256
+
+---
+
+## Quick Start
+
+### 1. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+### 2. Start RabbitMQ
+
+```bash
+brew services start rabbitmq
+```
+
+---
+
+### 3. Run worker
+
+```bash
+cd src
+python -m worker.worker
+```
+
+---
+
+### 4. Run API
+
+```bash
+cd src
+python -m uvicorn api.main:app --reload
+```
+
+---
+
+### 5. Example request
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/secrets/split \
+-H "Content-Type: application/json" \
+-d '{
+  "secret": "hello",
+  "threshold": 3,
+  "total_shares": 5
+}'
+```
+
+---
+
+## 📌 Notes
+
+* Processing is asynchronous (via RabbitMQ)
+* Worker handles computation independently
+* API returns immediately after publishing task
+
+---
+
+## 🎯 Summary
+
+This project demonstrates:
+
+* Shamir Secret Sharing implementation
+* Integrity validation using hashing
+* Distributed processing with message broker
+* Clear separation between API and computation layers
+
