@@ -1,8 +1,5 @@
 from dataclasses import dataclass
 
-SHARE_VERSION = "sss1"
-
-
 @dataclass(frozen=True)
 class Share:
     threshold: int
@@ -12,16 +9,14 @@ class Share:
     y: int
 
     def serialize(self) -> str:
-        return f"{SHARE_VERSION}:{self.threshold}:{self.prime:x}:{self.byte_length:x}:{self.x:x}:{self.y:x}"
+        """serialize share to string"""
+        return f"{self.threshold}:{self.prime:x}:{self.byte_length:x}:{self.x:x}:{self.y:x}"
 
     @classmethod
     def parse(cls, raw: str) -> "Share":
-        """Parse share from string format."""
+        """parse share from string"""
         try:
-            version, t, p, bl, x, y = raw.strip().split(":")
-            if version != SHARE_VERSION:
-                raise ValueError
-
+            t, p, bl, x, y = raw.strip().split(":")
             return cls(
                 threshold = int(t),
                 prime = int(p, 16),
