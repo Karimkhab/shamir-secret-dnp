@@ -1,7 +1,10 @@
 import logging
 
-from shamir.core import calculate_polynomial, generate
+from sympy import Dict
+
+from shamir.core import calculate_polynomial, generate, hash_data
 from shamir.share import Share
+
 
 
 logger = logging.getLogger(__name__)
@@ -27,7 +30,7 @@ def check_input_data(secret: str, threshold: int, total_shares: int) -> None:
         raise ValueError("threshold must not exceed total_shares")
 
 
-def split_secret(secret: str, threshold: int, total_shares: int) -> list[str]:
+def split_secret(secret: str, threshold: int, total_shares: int) -> Dict[str]:
     """
     Split a secret into a list of shares.
     :param secret: Non-empty text secret to split.
@@ -41,9 +44,10 @@ def split_secret(secret: str, threshold: int, total_shares: int) -> list[str]:
 
     secret_bytes = secret.encode("utf-8")
     secret_int = int.from_bytes(secret_bytes, "big")
+    secret_hash = hash_data(secret_bytes)
 
     # generate prime number and polynomial coefficients
-    prime, coefficients = generate(secret_int, threshold, byte_length, total_shares)
+    prime, coefficients = generate(secret_int, threshold)
 
     shares = []
     for x in range(1, total_shares + 1):
@@ -60,13 +64,13 @@ def split_secret(secret: str, threshold: int, total_shares: int) -> list[str]:
         shares.append(share.serialize())
 
     # write logs of execution
-    logger.info(
-        "Generated Shamir shares",
-        extra={
-            "threshold": threshold,
-            "total_shares": total_shares
-        },
-    )
-    return shares
+    logger.info("Splitting secret", extra={
+        "threshold": threshold,
+        "total_shares": total_shares
+    })
+    return {
+        "shares": shares,
+        "hash": secret_hash
+    }
 
 

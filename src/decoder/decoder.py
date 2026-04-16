@@ -1,12 +1,12 @@
 import logging
 
-from shamir.core import lagrange_interpolate_at_zero
-from shamir.share import Share, validate_consistent_shares
+from shamir.core import lagrange_interpolate_at_zero, hash_data
+from shamir.share import Share
 
 
 logger = logging.getLogger(__name__)
 
-def check_input_data(shares: list[str]) -> None:
+def check_input_data(shares: list[str], expected_hash: str) -> None:
     """
     Validate input data before recovering a secret.
     :param shares: list of shares
@@ -15,40 +15,51 @@ def check_input_data(shares: list[str]) -> None:
         raise ValueError("malformed share")
     if not shares:
         raise ValueError("insufficient shares")
+    if not isinstance(expected_hash, str) or not expected_hash:
+        raise ValueError("invalid hash")
 
 
-
-def recover_secret(shares: list[str]) -> str:
+def recover_secret(shares: list[str], expected_hash: str) -> str:
     """
     Recover the original UTF-8 text secret from at least threshold shares.
-    :param shares:
-    :return:
+    :param shares: list of shares
+    :return: secret UTF-8 text
     """
-    check_input_data(shares)
+    check_input_data(shares, expected_hash)
 
-    parsed_shares = [Share.parse(share) for share in shares]
-
+    parsed_shares = [Share.parse(s) for s in shares]
     first = parsed_shares[0]
-    selected_shares = parsed_shares[: first.threshold]
-    points = [(share.x, share.y) for share in selected_shares]
 
+    # check enough shares
+    if len(parsed_shares) < first.threshold:
+        raise ValueError("insufficient shares")
+
+    # check consistency
+    for s in parsed_shares:
+        if s.prime != first.prime or s.threshold != first.threshold or s.byte_length != first.byte_length:
+            raise ValueError("inconsistent shares")
+
+    # take only threshold shares
+    selected = parsed_shares[:first.threshold]
+    points = [(s.x, s.y) for s in selected]
+
+    # recover secret
     secret_int = lagrange_interpolate_at_zero(points, first.prime)
+
     try:
         secret_bytes = secret_int.to_bytes(first.byte_length, "big")
-    except OverflowError as error:
-        raise ValueError("inconsistent shares") from error
-
-    try:
         secret = secret_bytes.decode("utf-8")
-    except UnicodeDecodeError as error:
-        raise ValueError("inconsistent shares") from error
+    except Exception:
+        raise ValueError("inconsistent shares")
 
-    # Hash logging confirms integrity without exposing the reconstructed secret.
-    logger.info(
-        "Recovered Shamir secret",
-        extra={
-            "threshold": first.threshold,
-            "provided_shares": len(parsed_shares),
-        },
-    )
+    # hash check (CRITICAL)
+    if hash_data(secret_bytes) != expected_hash:
+        raise ValueError("invalid shares")
+
+    # write logs of execution
+    logger.info("Recovered Shamir secret", extra={
+        "threshold": first.threshold,
+        "provided_shares": len(parsed_shares),
+    },)
+
     return secret
