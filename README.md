@@ -1,5 +1,10 @@
 # Shamir Secret Sharing
 
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688)](https://fastapi.tiangolo.com/)
+[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-message_broker-FF6600)](https://www.rabbitmq.com/)
+[![pytest](https://img.shields.io/badge/pytest-tests-0A9EDC)](https://docs.pytest.org/)
+
 This project implements Shamir Secret Sharing for splitting a text secret into
 multiple shares and reconstructing it from a threshold number of shares.
 
@@ -247,6 +252,12 @@ pytest
 - Shares are serialized as `threshold:prime:byte_length:x:y:hash`.
 - The code uses finite field arithmetic over `GF(p)`, cryptographically secure randomness from `secrets`, and Lagrange interpolation for reconstruction.
 - Do not log the original secret or the full list of shares.
+
+## Demo and Report
+
+- Demo API: [docs/report.pdf](docs/report.pdf)
+- PDF report: [docs/report.pdf](docs/report.pdf)
+
 
 ## Links
 
