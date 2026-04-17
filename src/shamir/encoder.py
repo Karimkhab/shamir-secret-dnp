@@ -56,7 +56,8 @@ def split_secret(secret: str, threshold: int, total_shares: int) -> dict[str]:
             threshold = threshold,
             prime = prime,
             byte_length = len(secret_bytes),
-            x = x, y = y
+            x = x, y = y,
+            secret_hash = secret_hash,
         )
         shares.append(share.serialize())
 
@@ -66,8 +67,6 @@ def split_secret(secret: str, threshold: int, total_shares: int) -> dict[str]:
         "total_shares": total_shares
     })
     return {
-        "shares": shares,
-        "hash": secret_hash
+        "shares": shares
     }
-
 

@@ -6,7 +6,7 @@ from shamir.share import Share
 
 logger = logging.getLogger(__name__)
 
-def check_input_data(shares: list[str], expected_hash: str) -> None:
+def check_input_data(shares: list[str]) -> None:
     """
     Validate input data before recovering a secret.
     :param shares: list of shares
@@ -15,17 +15,15 @@ def check_input_data(shares: list[str], expected_hash: str) -> None:
         raise ValueError("malformed share")
     if not shares:
         raise ValueError("insufficient shares")
-    if not isinstance(expected_hash, str) or not expected_hash:
-        raise ValueError("invalid hash")
 
 
-def recover_secret(shares: list[str], expected_hash: str) -> str:
+def recover_secret(shares: list[str]) -> str:
     """
     Recover the original UTF-8 text secret from at least threshold shares.
     :param shares: list of shares
     :return: secret UTF-8 text
     """
-    check_input_data(shares, expected_hash)
+    check_input_data(shares)
 
     parsed_shares = [Share.parse(s) for s in shares]
     first = parsed_shares[0]
@@ -36,7 +34,12 @@ def recover_secret(shares: list[str], expected_hash: str) -> str:
 
     # check consistency
     for s in parsed_shares:
-        if s.prime != first.prime or s.threshold != first.threshold or s.byte_length != first.byte_length:
+        if (
+            s.prime != first.prime
+            or s.threshold != first.threshold
+            or s.byte_length != first.byte_length
+            or s.secret_hash != first.secret_hash
+        ):
             raise ValueError("inconsistent shares")
 
     # take only threshold shares
@@ -53,7 +56,7 @@ def recover_secret(shares: list[str], expected_hash: str) -> str:
         raise ValueError("inconsistent shares")
 
     # hash check (CRITICAL)
-    if hash_data(secret_bytes) != expected_hash:
+    if hash_data(secret_bytes) != first.secret_hash:
         raise ValueError("invalid shares")
 
     # write logs of execution
