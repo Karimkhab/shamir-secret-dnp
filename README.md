@@ -1,166 +1,88 @@
-# Shamir Secret Sharing (Distributed System)
+# Shamir Secret Sharing
 
-This project implements **Shamir Secret Sharing** in a **distributed architecture** using FastAPI and RabbitMQ.
+This project implements Shamir Secret Sharing for splitting a text secret into
+multiple shares and reconstructing it from a threshold number of shares.
 
-It demonstrates how a cryptographic algorithm can be integrated into an asynchronous system with message brokers.
-
----
+The demo backend is a synchronous FastAPI service: the API calls the Shamir core
+directly and returns the generated shares or reconstructed secret immediately.
 
 ## Overview
 
-- Split a secret into multiple shares
-- Recover the secret from a subset of shares (threshold-based)
-- Validate reconstruction using SHA-256 hash
-- Process tasks asynchronously via RabbitMQ
-
----
+- Split a UTF-8 text secret into `total_shares` serialized shares.
+- Recover the original secret from at least `threshold` valid shares.
+- Use SHA-256 to verify that the reconstructed secret matches the original.
+- Log generation and reconstruction metadata for auditability.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    classDef blue fill:#f0f6ff,stroke:#3b82f6,color:#000;
-
-    UI["Frontend (React)"]:::blue
-    API["FastAPI API"]:::blue
-    MQ["RabbitMQ"]:::blue
-    WORKER["Worker"]:::blue
-
-    UI --> API
-    API --> MQ
-    MQ --> WORKER
-````
-
----
-
-## Message Flow
-
-```mermaid
-flowchart LR
-    CLIENT["Client"] --> API["API"]
-    API -->|publish| MQ["Queue"]
-    MQ -->|consume| WORKER["Worker"]
-    WORKER --> RESULT["Result"]
+    UI["Frontend / Demo UI"] --> API["FastAPI API"]
+    API --> CORE["Shamir Core"]
+    CORE --> API
 ```
 
----
+The `broker/` and `worker/` modules are kept as optional RabbitMQ experiments,
+but they are not required for the main demo flow.
 
 ## Project Structure
 
-```
+```text
 src/
-├── api/        # FastAPI endpoints (split / recover)
-├── broker/     # RabbitMQ publisher
-├── worker/     # Background worker (processing tasks)
-├── shamir/     # Core Shamir algorithm (math + logic)
-├── frontend/   # React UI
+├── api/        # FastAPI endpoints
+├── shamir/     # Core Shamir algorithm
+├── frontend/   # UI work area
+├── broker/     # Optional RabbitMQ publisher
+└── worker/     # Optional RabbitMQ worker
+tests/          # Core and API contract tests
 ```
 
----
-
-## Components
-
-### 🔹 API (FastAPI)
-
-* Accepts client requests
-* Sends tasks to RabbitMQ
-* Does not perform heavy computation
-
-### 🔹 RabbitMQ
-
-* Message broker
-* Decouples API and worker
-* Enables async processing
-
-### 🔹 Worker
-
-* Consumes tasks from queue
-* Executes:
-
-  * `split_secret`
-  * `recover_secret`
-* Logs results
-
-### 🔹 Shamir Core
-
-* Polynomial-based secret sharing
-* Lagrange interpolation for recovery
-* Hash validation for correctness
-
----
-
-## Security
-
-* Finite field arithmetic: `GF(p)` where `p > secret`
-* Cryptographically secure randomness (`secrets`)
-* Integrity check via SHA-256
-
----
 
 ## Quick Start
 
-### 1. Install dependencies
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
-
-### 2. Start RabbitMQ
-
-```bash
-brew services start rabbitmq
-```
-
----
-
-### 3. Run worker
-
-```bash
-cd src
-python -m worker.worker
-```
-
----
-
-### 4. Run API
+Run the API:
 
 ```bash
 cd src
 python -m uvicorn api.main:app --reload
 ```
 
----
-
-### 5. Example request
+Example split request:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/secrets/split \
--H "Content-Type: application/json" \
--d '{
-  "secret": "hello",
-  "threshold": 3,
-  "total_shares": 5
-}'
+  -H "Content-Type: application/json" \
+  -d '{
+    "secret": "hello",
+    "threshold": 3,
+    "total_shares": 5
+  }'
 ```
 
----
+Run tests:
 
-## 📌 Notes
+```bash
+pytest
+```
 
-* Processing is asynchronous (via RabbitMQ)
-* Worker handles computation independently
-* API returns immediately after publishing task
+## Validation Checklist
 
----
+- Hash integrity: `split` returns a SHA-256 hash, and `recover` verifies the reconstructed secret against `expectedHash`.
+- Insufficient shares: reconstruction with fewer than `threshold` shares fails with `INVALID_REQUEST`.
+- Audit logs: split and recover operations log request metadata such as request id, threshold, and share count without logging the secret value.
 
-## 🎯 Summary
+## Notes
 
-This project demonstrates:
+- Shares are serialized as `threshold:prime:byte_length:x:y`.
+- The code uses finite field arithmetic over `GF(p)`, cryptographically secure randomness from `secrets`, and Lagrange interpolation for reconstruction.
+- Do not log the original secret or the full list of shares in production logs.
 
-* Shamir Secret Sharing implementation
-* Integrity validation using hashing
-* Distributed processing with message broker
-* Clear separation between API and computation layers
-
+## Links and Articles
+- Original [paper](https://web.mit.edu/6.857/OldStuff/Fall03/ref/Shamir-HowToShareASecret.pdf)
+- [Visualization](https://iancoleman.io/shamir/)

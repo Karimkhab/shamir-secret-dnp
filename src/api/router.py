@@ -1,37 +1,57 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from pydantic import BaseModel
+
 from broker.rabbit import publish_message
-import uuid
 
 router = APIRouter(prefix="/api/v1/secrets")
 
 
+class SplitSecretRequest(BaseModel):
+    """Request body for splitting a text secret into Shamir shares."""
+
+    secret: str
+    threshold: int
+    total_shares: int
+
+
+class RecoverSecretRequest(BaseModel):
+    """Request body for recovering a secret and checking it against SHA-256."""
+
+    shares: list[str]
+    expected_hash: str
+
+
 @router.post("/split")
-def split_secret(data: dict):
-    request_id = str(uuid.uuid4())
+def split_secret(request: Request, data: SplitSecretRequest):
+    """Queue a split task and return its request id."""
+
+    request_id = request.state.request_id
 
     publish_message({
         "type": "split",
         "request_id": request_id,
-        "payload": data
+        "payload": data.model_dump(),
     })
 
     return {
         "status": "accepted",
-        "requestId": request_id
+        "request_id": request_id,
     }
 
 
 @router.post("/recover")
-def recover_secret(data: dict):
-    request_id = str(uuid.uuid4())
+def recover_secret(request: Request, data: RecoverSecretRequest):
+    """Queue a recovery task and return its request id."""
+
+    request_id = request.state.request_id
 
     publish_message({
         "type": "recover",
         "request_id": request_id,
-        "payload": data
+        "payload": data.model_dump(),
     })
 
     return {
         "status": "accepted",
-        "requestId": request_id
+        "request_id": request_id,
     }
