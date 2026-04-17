@@ -8,7 +8,6 @@ router = APIRouter(prefix="/api/v1/secrets")
 
 class SplitSecretRequest(BaseModel):
     """Request body for splitting a text secret into Shamir shares."""
-
     secret: str
     threshold: int
     total_shares: int
@@ -16,7 +15,6 @@ class SplitSecretRequest(BaseModel):
 
 class RecoverSecretRequest(BaseModel):
     """Request body for recovering a secret and checking it against SHA-256."""
-
     shares: list[str]
     expected_hash: str
 
@@ -27,12 +25,14 @@ def split_secret(request: Request, data: SplitSecretRequest):
 
     request_id = request.state.request_id
 
+    # publish msg to rabbit
     publish_message({
         "type": "split",
         "request_id": request_id,
         "payload": data.model_dump(),
     })
 
+    # return response
     return {
         "status": "accepted",
         "request_id": request_id,
@@ -45,12 +45,14 @@ def recover_secret(request: Request, data: RecoverSecretRequest):
 
     request_id = request.state.request_id
 
+    # publish msg to rabbit
     publish_message({
         "type": "recover",
         "request_id": request_id,
         "payload": data.model_dump(),
     })
 
+    # return response
     return {
         "status": "accepted",
         "request_id": request_id,
