@@ -255,7 +255,8 @@ pytest
 
 ## Demo and Report
 
-- Demo API: [docs/report.pdf](docs/report.pdf)
+- Demo API: [docs/demo.mov](docs/demo.mov)
+- Demo Front: [docs/demo-front.mp4](docs/demo-front.mp4)
 - PDF report: [docs/report.pdf](docs/report.pdf)
 
 
