@@ -2,6 +2,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-frontend-61DAFB)](https://react.dev/)
 [![RabbitMQ](https://img.shields.io/badge/RabbitMQ-message_broker-FF6600)](https://www.rabbitmq.com/)
 [![pytest](https://img.shields.io/badge/pytest-tests-0A9EDC)](https://docs.pytest.org/)
 
@@ -241,9 +242,20 @@ Run tests:
 pytest
 ```
 
-Quick frontend start:
-- [src/frontend/README.md](src/frontend/README.md)
-  
+Run the frontend in another terminal:
+
+```bash
+cd src/frontend
+npm install
+npm run dev
+```
+
+The Vite app usually starts at:
+
+```text
+http://localhost:5173
+```
+
 ## Validation Checklist
 
 - Hash integrity: `split` embeds a SHA-256 hash into every share, and `recover` verifies the reconstructed secret against that embedded hash.
