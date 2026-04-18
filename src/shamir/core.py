@@ -9,16 +9,17 @@ def hash_data(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def generate(secret_int: int, threshold: int) -> tuple[int, list[int]]:
+def generate(secret_int: int, threshold: int, total_shares: int) -> tuple[int, list[int]]:
     """
     Generate coefficients for a polynomial with f(0) equal to secret.
     :param secret_int: secret value.
     :param threshold: threshold value.
+    :param total_shares: total number of shares.
     :return: prime and coefficients
     """
     # choose prime that more secret and total shares
     offset = secrets.randbits(128)
-    prime = int(nextprime(secret_int + offset))
+    prime = int(nextprime(max(secret_int + offset, total_shares)))
 
     # first coefficients = secret
     coefficients = [secret_int]
@@ -48,9 +49,9 @@ def calculate_polynomial(coefficients: list[int], x: int, prime: int) -> int:
 def lagrange_interpolate_at_zero(points: list[tuple[int, int]], prime: int) -> int:
     """
     Recover f(0) from polynomial points using modular Lagrange interpolation.
-    :param points:
-    :param prime:
-    :return:
+    :param points: list of (x, y) points.
+    :param prime: prime modulus used for finite field operations.
+    :return: result of the polynomial.
     """
     if not points:
         raise ValueError("no points provided")

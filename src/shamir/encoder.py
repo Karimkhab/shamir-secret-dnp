@@ -44,7 +44,7 @@ def split_secret(secret: str, threshold: int, total_shares: int) -> dict[str]:
     secret_hash = hash_data(secret_bytes)
 
     # generate prime number and polynomial coefficients
-    prime, coefficients = generate(secret_int, threshold)
+    prime, coefficients = generate(secret_int, threshold, total_shares)
 
     shares = []
     for x in range(1, total_shares + 1):
