@@ -241,6 +241,9 @@ Run tests:
 pytest
 ```
 
+Quick frontend start:
+- [src/frontend/README.md](src/frontend/README.md)
+  
 ## Validation Checklist
 
 - Hash integrity: `split` embeds a SHA-256 hash into every share, and `recover` verifies the reconstructed secret against that embedded hash.
@@ -255,7 +258,8 @@ pytest
 
 ## Demo and Report
 
-- Demo API: [docs/report.pdf](docs/report.pdf)
+- Demo API: [docs/demo.mov](docs/demo.mov)
+- Demo Front: [docs/demo-front.mp4](docs/demo-front.mp4)
 - PDF report: [docs/report.pdf](docs/report.pdf)
 
 

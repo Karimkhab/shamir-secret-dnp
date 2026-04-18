@@ -3,6 +3,7 @@ import uuid
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from .router import router
 
 logging.basicConfig(
@@ -12,6 +13,16 @@ logging.basicConfig(
 
 app = FastAPI(title="Shamir Secret Sharing API")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.middleware("http")
 async def add_request_id(request: Request, call_next):
