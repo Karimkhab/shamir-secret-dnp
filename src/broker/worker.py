@@ -8,6 +8,11 @@ QUEUE_NAME = "shamir_queue"
 logger = logging.getLogger(__name__)
 
 
+def log_reason(message: str) -> str:
+    """Format validation messages as single-token log values."""
+    return message.replace(" ", "_")
+
+
 def process_message(message: dict) -> dict:
     """Run a Shamir task received from RabbitMQ and return its result."""
     msg_type = message["type"]
@@ -49,8 +54,29 @@ def callback(ch, method, properties, body) -> None:
     message = json.loads(body)
     request_id = message.get("request_id")
     msg_type = message.get("type")
+    payload = message.get("payload", {})
 
     try:
+        if msg_type == "split":
+            logger.info(
+                "request_id=%s operation=split event=worker_started threshold=%s total_shares=%s",
+                request_id,
+                payload.get("threshold"),
+                payload.get("total_shares"),
+            )
+        elif msg_type == "recover":
+            logger.info(
+                "request_id=%s operation=recover event=worker_started shares_count=%s",
+                request_id,
+                len(payload.get("shares", [])),
+            )
+        else:
+            logger.info(
+                "request_id=%s operation=%s event=worker_started",
+                request_id,
+                msg_type,
+            )
+
         result = process_message(message)
         response = {
             "request_id": request_id,
@@ -60,17 +86,18 @@ def callback(ch, method, properties, body) -> None:
         }
 
         # write log
-        logger.info(
-            "Worker completed task request_id=%s type=%s",
-            request_id,
-            msg_type,
-        )
-        print(json.dumps({
-            "request_id": request_id,
-            "type": msg_type,
-            "status": "completed",
-            "result_keys": sorted(result),
-        }, ensure_ascii=False))
+        if msg_type == "split":
+            logger.info(
+                "request_id=%s operation=split event=worker_finished success=true shares_count=%s",
+                request_id,
+                len(result.get("shares", [])),
+            )
+        else:
+            logger.info(
+                "request_id=%s operation=%s event=worker_finished success=true",
+                request_id,
+                msg_type,
+            )
 
         # send msg to reply queue
         send_response(ch, properties, response)
@@ -85,17 +112,20 @@ def callback(ch, method, properties, body) -> None:
         }
 
         # write log
-        logger.exception(
-            "Worker failed task request_id=%s type=%s",
-            request_id,
-            msg_type,
-        )
-        print(json.dumps({
-            "request_id": request_id,
-            "type": msg_type,
-            "status": "failed",
-            "error": str(exc),
-        }, ensure_ascii=False))
+        if isinstance(exc, ValueError):
+            logger.warning(
+                "request_id=%s operation=%s event=worker_finished success=false reason=%s",
+                request_id,
+                msg_type,
+                log_reason(str(exc)),
+            )
+        else:
+            logger.exception(
+                "request_id=%s operation=%s event=worker_finished success=false reason=%s",
+                request_id,
+                msg_type,
+                log_reason(str(exc)),
+            )
 
         # send msg to reply queue
         send_response(ch, properties, response)
@@ -108,6 +138,7 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
+    logging.getLogger("pika").setLevel(logging.WARNING)
 
     # pika connection
     connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
@@ -125,7 +156,7 @@ def main() -> None:
             auto_ack=False,
         )
 
-        print("Worker started...")
+        logger.info("service=worker event=started queue=%s", QUEUE_NAME)
         channel.start_consuming()
 
     finally:

@@ -62,11 +62,12 @@ def split_secret(secret: str, threshold: int, total_shares: int) -> dict[str]:
         shares.append(share.serialize())
 
     # write logs of execution
-    logger.info("Splitting secret", extra={
-        "threshold": threshold,
-        "total_shares": total_shares
-    })
+    logger.info(
+        "operation=split event=core_generated threshold=%s total_shares=%s shares_count=%s",
+        threshold,
+        total_shares,
+        len(shares),
+    )
     return {
         "shares": shares
     }
-

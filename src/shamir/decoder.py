@@ -60,9 +60,10 @@ def recover_secret(shares: list[str]) -> str:
         raise ValueError("invalid shares")
 
     # write logs of execution
-    logger.info("Recovered Shamir secret", extra={
-        "threshold": first.threshold,
-        "provided_shares": len(parsed_shares),
-    },)
+    logger.info(
+        "operation=recover event=core_recovered threshold=%s provided_shares=%s",
+        first.threshold,
+        len(parsed_shares),
+    )
 
     return secret

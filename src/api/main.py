@@ -10,6 +10,8 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
+logging.getLogger("pika").setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Shamir Secret Sharing API")
 
@@ -37,6 +39,11 @@ async def add_request_id(request: Request, call_next):
 async def validation_exception_handler(request: Request, _exc: RequestValidationError):
     """Return validation errors in the project-wide JSON format."""
     request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    logger.warning(
+        "request_id=%s operation=http event=failed reason=invalid_request_body path=%s",
+        request_id,
+        request.url.path,
+    )
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={

@@ -48,11 +48,27 @@ def call_worker(message: dict, request_id: str, timeout: int = 10) -> dict:
         )
 
         # write log
-        logger.info(
-            "Published task request_id=%s type=%s",
-            message.get("request_id"),
-            message.get("type"),
-        )
+        operation = message.get("type")
+        payload = message.get("payload", {})
+        if operation == "split":
+            logger.info(
+                "request_id=%s operation=split event=published_to_queue threshold=%s total_shares=%s",
+                message.get("request_id"),
+                payload.get("threshold"),
+                payload.get("total_shares"),
+            )
+        elif operation == "recover":
+            logger.info(
+                "request_id=%s operation=recover event=published_to_queue shares_count=%s",
+                message.get("request_id"),
+                len(payload.get("shares", [])),
+            )
+        else:
+            logger.info(
+                "request_id=%s operation=%s event=published_to_queue",
+                message.get("request_id"),
+                operation,
+            )
 
         deadline = time.monotonic() + timeout
         while response is None and time.monotonic() < deadline:

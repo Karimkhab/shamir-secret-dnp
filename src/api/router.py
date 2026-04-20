@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -5,6 +7,12 @@ from pydantic import BaseModel
 from broker.rabbit import call_worker
 
 router = APIRouter(prefix="/api/v1/secrets")
+logger = logging.getLogger(__name__)
+
+
+def log_reason(message: str) -> str:
+    """Format validation messages as single-token log values."""
+    return message.replace(" ", "_")
 
 
 class SplitSecretRequest(BaseModel):
@@ -36,6 +44,13 @@ def split_secret(request: Request, data: SplitSecretRequest):
     """Send a split task to the worker and return its result."""
 
     request_id = request.state.request_id
+    logger.info(
+        "request_id=%s operation=split event=received threshold=%s total_shares=%s secret_length=%s",
+        request_id,
+        data.threshold,
+        data.total_shares,
+        len(data.secret),
+    )
 
     try:
         # send msg to queue and wait response
@@ -45,12 +60,27 @@ def split_secret(request: Request, data: SplitSecretRequest):
             "payload": data.model_dump(),
         }, request_id=request_id)
     except TimeoutError as exc:
+        logger.warning(
+            "request_id=%s operation=split event=failed reason=%s",
+            request_id,
+            log_reason(str(exc)),
+        )
         return invalid_request(str(exc), request_id)
 
     if response["status"] == "failed":
+        logger.warning(
+            "request_id=%s operation=split event=failed reason=%s",
+            request_id,
+            log_reason(response["error"]),
+        )
         return invalid_request(response["error"], request_id)
 
     result = response["result"]
+    logger.info(
+        "request_id=%s operation=split event=response_sent status=200 shares_count=%s",
+        request_id,
+        len(result["shares"]),
+    )
 
     # return response
     return {
@@ -65,6 +95,11 @@ def recover_secret(request: Request, data: RecoverSecretRequest):
     """Send a recovery task to the worker and return its result."""
 
     request_id = request.state.request_id
+    logger.info(
+        "request_id=%s operation=recover event=received shares_count=%s",
+        request_id,
+        len(data.shares),
+    )
 
     try:
         # send msg to queue and wait response
@@ -74,10 +109,25 @@ def recover_secret(request: Request, data: RecoverSecretRequest):
             "payload": data.model_dump(),
         }, request_id=request_id)
     except TimeoutError as exc:
+        logger.warning(
+            "request_id=%s operation=recover event=failed reason=%s",
+            request_id,
+            log_reason(str(exc)),
+        )
         return invalid_request(str(exc), request_id)
 
     if response["status"] == "failed":
+        logger.warning(
+            "request_id=%s operation=recover event=failed reason=%s",
+            request_id,
+            log_reason(response["error"]),
+        )
         return invalid_request(response["error"], request_id)
+
+    logger.info(
+        "request_id=%s operation=recover event=response_sent status=200",
+        request_id,
+    )
 
     # return response
     return {
